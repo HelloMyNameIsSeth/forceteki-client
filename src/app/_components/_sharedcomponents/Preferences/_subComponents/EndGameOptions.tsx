@@ -39,10 +39,11 @@ function EndGameOptions({ handleOpenBugReport, gameMode }: IProps) {
     const winsPerPlayer: Record<string, number> = winHistory?.winsPerPlayer || {};
     const currentGameNumber = winHistory?.currentGameNumber || 1;
     const hasConfirmedNextGame = lobbyState?.hasConfirmedNextGame || false;
+    const setConcededByPlayerId = winHistory?.setConcededByPlayerId || null;
 
     // Determine if we're in Bo3 mode and if the set is complete
     const isBo3Mode = gamesToWinMode === GamesToWinMode.BestOfThree;
-    const isBo3SetComplete = isBo3Mode && Object.values(winsPerPlayer).some((wins) => wins >= 2);
+    const isBo3SetComplete = isBo3Mode && (Object.values(winsPerPlayer).some((wins) => wins >= 2) || !!setConcededByPlayerId);
 
     useEffect(() => {
         if (statsSubmitNotification) {
@@ -319,6 +320,7 @@ function EndGameOptions({ handleOpenBugReport, gameMode }: IProps) {
                     players={gameState.players}
                     connectedPlayer={connectedPlayer}
                     isBo3SetComplete={isBo3SetComplete}
+                    setConcededByPlayerId={setConcededByPlayerId}
                 />
             )}
 

@@ -20,12 +20,13 @@ enum PhaseName {
 }
 
 function CurrentGameTab() {
-    const { sendGameMessage, connectedPlayer, gameState, isSpectator, lobbyState } = useGame();
+    const { sendGameMessage, sendLobbyMessage, connectedPlayer, gameState, isSpectator, lobbyState } = useGame();
     const isDev = process.env.NODE_ENV === 'development';
     const router = useRouter();
     const currentPlayer = gameState.players[connectedPlayer];
     const currentPlayerName = currentPlayer?.name;
     const [confirmConcede, setConfirmConcede] = useState<boolean>(false);
+    const [confirmConcedeBo3, setConfirmConcedeBo3] = useState<boolean>(false);
     const [bugReportOpen, setBugReportOpen] = useState<boolean>(false);
 
     const isPrivateLobby = lobbyState?.gameType === 'Private';
@@ -35,10 +36,11 @@ function CurrentGameTab() {
     const gamesToWinMode = winHistory?.gamesToWinMode || GamesToWinMode.BestOfOne;
     const winsPerPlayer: Record<string, number> = winHistory?.winsPerPlayer || {};
     const currentGameNumber = winHistory?.currentGameNumber || 1;
+    const setConcededByPlayerId = winHistory?.setConcededByPlayerId || null;
 
     // Determine if we're in Bo3 mode and if the set is complete
     const isBo3Mode = gamesToWinMode === GamesToWinMode.BestOfThree;
-    const isBo3SetComplete = isBo3Mode && Object.values(winsPerPlayer).some((wins) => wins >= 2);
+    const isBo3SetComplete = isBo3Mode && (Object.values(winsPerPlayer).some((wins) => wins >= 2) || !!setConcededByPlayerId);
 
     useEffect(() => {
         if(confirmConcede){
@@ -46,6 +48,13 @@ function CurrentGameTab() {
             return () => clearTimeout(timer);
         }
     }, [confirmConcede]);
+
+    useEffect(() => {
+        if(confirmConcedeBo3){
+            const timer = setTimeout(() => setConfirmConcedeBo3(false), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [confirmConcedeBo3]);
 
     // Click handler for the Concede button.
     const handleConcede = () => {
@@ -56,6 +65,18 @@ function CurrentGameTab() {
             sendGameMessage(['concede', currentPlayerName]);
             // Reset the confirmation
             setConfirmConcede(false);
+        }
+    };
+
+    // Click handler for the Concede Bo3 Set button.
+    const handleConcedeBo3 = () => {
+        if (!confirmConcedeBo3) {
+            setConfirmConcedeBo3(true);
+        } else {
+            // Send the lobby message only on the second click
+            sendLobbyMessage(['concedeBo3']);
+            // Reset the confirmation
+            setConfirmConcedeBo3(false);
         }
     };
 
@@ -131,7 +152,7 @@ function CurrentGameTab() {
                 <Box sx={styles.functionContainer}>
                     <Typography sx={styles.typographyContainer} variant={'h3'}>Concede</Typography>
                     <Divider sx={{ mb: '20px' }}/>
-                    <Box sx={styles.contentContainer}>
+                    <Box sx={{ ...styles.contentContainer, mb: isBo3Mode ? '20px' : '0px' }}>
                         <PreferenceButton 
                             variant={'concede'}
                             text={confirmConcede ? 'Are you sure?' : 'Concede Game'}
@@ -139,9 +160,22 @@ function CurrentGameTab() {
                             sx={{ minWidth: '140px' }}
                         />
                         <Typography sx={styles.typeographyStyle}>
-                            Yield  current game and abandon. This match will count as a loss.
+                            Yield current game. This game will count as a loss.
                         </Typography>
                     </Box>
+                    {isBo3Mode && (
+                        <Box sx={styles.contentContainer}>
+                            <PreferenceButton 
+                                variant={'concede'}
+                                text={confirmConcedeBo3 ? 'Are you sure?' : 'Concede Bo3 Set'}
+                                buttonFnc={handleConcedeBo3}
+                                sx={{ minWidth: '140px' }}
+                            />
+                            <Typography sx={styles.typeographyStyle}>
+                                Yield entire Bo3 set. The set will count as a loss.
+                            </Typography>
+                        </Box>
+                    )}
                 </Box>
             )}
             {/* Bo3 Score Section */}
@@ -152,6 +186,7 @@ function CurrentGameTab() {
                     players={gameState.players}
                     connectedPlayer={connectedPlayer}
                     isBo3SetComplete={isBo3SetComplete}
+                    setConcededByPlayerId={setConcededByPlayerId}
                 />
             )}
             {(isDev || gameState.undoEnabled) && isPrivateLobby && (

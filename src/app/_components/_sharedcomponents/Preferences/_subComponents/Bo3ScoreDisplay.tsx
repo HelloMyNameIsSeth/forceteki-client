@@ -10,6 +10,7 @@ interface IBo3ScoreDisplayProps {
     connectedPlayer: string;
     isBo3SetComplete: boolean;
     containerStyle?: object;
+    setConcededByPlayerId?: string | null;
 }
 
 function Bo3ScoreDisplay({
@@ -19,6 +20,7 @@ function Bo3ScoreDisplay({
     connectedPlayer,
     isBo3SetComplete,
     containerStyle = {},
+    setConcededByPlayerId = null,
 }: IBo3ScoreDisplayProps) {
     const styles = {
         typographyContainer: {
@@ -96,9 +98,20 @@ function Bo3ScoreDisplay({
                 </Table>
             </TableContainer>
             {isBo3SetComplete && (
-                <Typography sx={{ ...styles.typeographyStyle, color: '#ff9800', mt: '15px', ml: 0 }}>
-                    Set complete! {Object.entries(winsPerPlayer).find(([, wins]) => wins >= 2)?.[0] === connectedPlayer ? 'You won the set!' : 'Your opponent won the set.'}
-                </Typography>
+                <>
+                    <Typography sx={{ ...styles.typeographyStyle, color: '#ff9800', mt: '15px', ml: 0 }}>
+                        Set complete! {setConcededByPlayerId
+                            ? (setConcededByPlayerId === connectedPlayer ? 'You conceded the set.' : 'Your opponent conceded the set.')
+                            : (Object.entries(winsPerPlayer).find(([, wins]) => wins >= 2)?.[0] === connectedPlayer ? 'You won the set!' : 'Your opponent won the set.')}
+                    </Typography>
+                    {setConcededByPlayerId && (
+                        <Typography sx={{ ...styles.typeographyStyle, color: '#878787', mt: '8px', ml: 0, fontStyle: 'italic' }}>
+                            {setConcededByPlayerId === connectedPlayer
+                                ? 'You conceded the entire Bo3 set.'
+                                : `${players[setConcededByPlayerId]?.user?.username || 'Opponent'} conceded the entire Bo3 set.`}
+                        </Typography>
+                    )}
+                </>
             )}
         </Box>
     );
